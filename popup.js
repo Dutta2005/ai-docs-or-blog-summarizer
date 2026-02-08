@@ -25,7 +25,6 @@ async function saveApiKey() {
   $('key-status').textContent = '✓ API key saved';
   $('key-status').style.color = '#4ade80';
 }
-
 async function summarizePage() {
   const stored = await chrome.storage.local.get(['openai_api_key']);
   const apiKey = stored.openai_api_key;
@@ -53,7 +52,8 @@ async function summarizePage() {
     const summaryType = $('summary-type').value;
     const summary = await generateSummary(apiKey, pageContent, summaryType, tab.title);
     
-    $('summary-result').textContent = summary;
+    $('summary-result').innerHTML = marked.parse(summary);
+    
     $('result-container').classList.remove('hidden');
   } catch (err) {
     showError(err.message || 'Failed to generate summary.');
@@ -139,7 +139,7 @@ function hideError() {
 }
 
 async function copyToClipboard() {
-  const text = $('summary-result').textContent;
+  const text = $('summary-result').innerText;
   await navigator.clipboard.writeText(text);
   $('copy-btn').textContent = 'Copied!';
   setTimeout(() => $('copy-btn').textContent = 'Copy to Clipboard', 2000);
