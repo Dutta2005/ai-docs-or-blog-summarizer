@@ -1,3 +1,11 @@
+---
+name: JWOC Issue
+about: Create an issue for JGEC Winter of Code
+title: "[JWOC] <short issue title>"
+labels: [JWOC]
+assignees: ''
+---
+
 # 🐞 Issue Report / Feature Request
 
 Thank you for taking the time to open an issue! Please fill out the details below to help us understand and resolve it efficiently.
