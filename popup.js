@@ -52,11 +52,11 @@ async function summarizePage() {
 
     const summaryType = $('summary-type').value;
     const summary = await generateSummary(apiKey, pageContent, summaryType, tab.title);
-    
+
     $('summary-result').textContent = summary;
     $('result-container').classList.remove('hidden');
   } catch (err) {
-    showError(err.message || 'Failed to generate summary.');
+    showError(getUserFriendlyError(err));
   } finally {
     setLoading(false);
   }
@@ -91,36 +91,66 @@ async function generateSummary(apiKey, content, type, title) {
     technical: `Summarize this technical documentation. Include: purpose, key concepts, important functions/methods, and usage notes.`
   };
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that summarizes web content clearly and concisely.'
-        },
-        {
-          role: 'user',
-          content: `${prompts[type]}\n\nTitle: ${title}\n\nContent:\n${content}`
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.5
-    })
-  });
+  let response;
+  try {
+    response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that summarizes web content clearly and concisely.'
+          },
+          {
+            role: 'user',
+            content: `${prompts[type]}\n\nTitle: ${title}\n\nContent:\n${content}`
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.5
+      })
+    });
+  } catch (networkErr) {
+    const err = new Error('Network error. Please check your internet connection and try again.');
+    err.statusCode = 0;
+    throw err;
+  }
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.message || `API error: ${response.status}`);
+    let errBody;
+    try {
+      errBody = await response.json();
+    } catch (_) {
+      errBody = {};
+    }
+    const err = new Error(errBody.error?.message || `API error: ${response.status}`);
+    err.statusCode = response.status;
+    throw err;
   }
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+function getUserFriendlyError(err) {
+  if (err.statusCode === 0 || err.message === 'Failed to fetch') {
+    return 'Network error: Unable to reach OpenAI. Please check your internet connection and try again.';
+  }
+  if (err.statusCode === 401) {
+    return 'Invalid API key. Please check your OpenAI API key in the settings above and try again.';
+  }
+  if (err.statusCode === 429) {
+    return 'Rate limit exceeded. You have made too many requests. Please wait a moment and try again.';
+  }
+  if (err.statusCode >= 500) {
+    return 'OpenAI server error. The service may be temporarily unavailable. Please try again later.';
+  }
+  return err.message || 'An unexpected error occurred. Please try again.';
 }
 
 function setLoading(loading) {
