@@ -139,12 +139,20 @@ async function summarizePage() {
       pageContent = extractedContent;
     } catch (extractErr) {
       console.error('[Content Extraction Error]', extractErr);
-      throw new Error(USER_MESSAGES.content_extraction_failed);
+      throw {
+        type: ERROR_TYPES.CONTENT_EXTRACTION_FAILED,
+        userMessage: USER_MESSAGES.content_extraction_failed,
+        debugInfo: `Content extraction failed: ${extractErr?.message || 'Unknown error'}`
+      };
     }
 
     // Validate extracted content
     if (!pageContent || pageContent.length < 100) {
-      throw new Error(USER_MESSAGES.content_extraction_failed);
+      throw {
+        type: ERROR_TYPES.CONTENT_EXTRACTION_FAILED,
+        userMessage: USER_MESSAGES.content_extraction_failed,
+        debugInfo: `Extracted content too short: ${pageContent?.length || 0} characters (minimum 100 required)`
+      };
     }
 
     const summaryType = $('summary-type').value;
