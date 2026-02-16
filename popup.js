@@ -2,6 +2,9 @@ document.addEventListener("DOMContentLoaded", init);
 
 const $ = (id) => document.getElementById(id);
 
+//Summarized Data
+let summarizedData = null;
+
 // ============================================================================
 // ERROR HANDLING SYSTEM
 // ============================================================================
@@ -344,8 +347,8 @@ async function generateSummary(apiKey, content, type, title) {
       );
       throw errorInfo; // Throw structured object
     }
-
-    return data.choices[0].message.content;
+    summarizedData = data.choices[0].message.content;
+    return summarizedData;
   } catch (error) {
     // Handle specific error types
 
@@ -396,7 +399,7 @@ function hideError() {
 
 async function copyToClipboard() {
   try {
-    const text = $("summary-result")?.textContent;
+    const text = summarizedData;
     if (!text) {
       showError("📋 No summary to copy.");
       return;
