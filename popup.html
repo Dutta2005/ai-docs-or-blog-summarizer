@@ -1,49 +1,50 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Page Summarizer</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="container">
-    <h1>📝 AI Blog or Docs Summarizer</h1>
-    
-    <div id="settings-section">
-      <div class="input-group">
-        <label for="api-key">OpenAI API Key</label>
-        <input type="password" id="api-key" placeholder="sk-...">
-        <button id="save-key" class="btn-secondary">Save Key</button>
-      </div>
-      <p id="key-status" class="status"></p>
-    </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Page Summarizer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>📝 AI Blog or Docs Summarizer</h1>
 
-    <div id="summary-section">
-      <div class="input-group">
-        <label for="summary-type">Summary Type</label>
-        <select id="summary-type">
-          <option value="brief">Brief (2-3 sentences)</option>
-          <option value="detailed" selected>Detailed (bullet points)</option>
-          <option value="technical">Technical (for docs)</option>
-        </select>
+      <div id="settings-section">
+        <div class="input-group">
+          <label for="api-key">OpenAI API Key</label>
+          <input type="password" id="api-key" placeholder="sk-..." />
+          <button id="save-key" class="btn-secondary">Save Key</button>
+        </div>
+        <p id="key-status" class="status"></p>
       </div>
-      
-      <button id="summarize-btn" class="btn-primary">
-        <span id="btn-text">Summarize This Page</span>
-        <span id="loader" class="loader hidden"></span>
-      </button>
-      
-      <div id="result-container" class="hidden">
-        <h2>Summary</h2>
-        <div id="summary-result"></div>
-        <button id="copy-btn" class="btn-secondary">Copy to Clipboard</button>
+
+      <div id="summary-section">
+        <div class="input-group">
+          <label for="summary-type">Summary Type</label>
+          <select id="summary-type">
+            <option value="brief">Brief (2-3 sentences)</option>
+            <option value="detailed" selected>Detailed (bullet points)</option>
+            <option value="technical">Technical (for docs)</option>
+          </select>
+        </div>
+
+        <button id="summarize-btn" class="btn-primary">
+          <span id="btn-text">Summarize This Page</span>
+          <span id="loader" class="loader hidden"></span>
+        </button>
+
+        <div id="result-container" class="hidden">
+          <h2>Summary</h2>
+          <div id="summary-result"></div>
+          <button id="copy-btn" class="btn-secondary">Copy to Clipboard</button>
+        </div>
+
+        <p id="error-msg" class="error hidden"></p>
       </div>
-      
-      <p id="error-msg" class="error hidden"></p>
     </div>
-  </div>
-  
-  <script src="popup.js"></script>
-</body>
+    <script src="marked.umd.js"></script>
+    <script src="purify.min.js"></script>
+    <script src="popup.js"></script>
+  </body>
 </html>
