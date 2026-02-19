@@ -110,6 +110,7 @@ async function init() {
   $("summarize-btn").addEventListener("click", summarizePage);
   $("copy-md-btn").addEventListener("click", copyAsMarkdown);
   $("copy-plain-btn").addEventListener("click", copyAsPlainText);
+  $("clear-summary-btn").addEventListener("click", clearSummary);
 }
 
 async function saveApiKey() {
@@ -405,8 +406,8 @@ async function copyAsMarkdown() {
       return;
     }
     await navigator.clipboard.writeText(text);
-    $("copy-md-btn").textContent = "Copied As Markdown!";
-    setTimeout(() => ($("copy-md-btn").textContent = "Copy As Markdown"), 2000);
+    $("copy-md-btn").textContent = "Copied as Markdown!";
+    setTimeout(() => ($("copy-md-btn").textContent = "Copy as Markdown"), 2000);
   } catch (err) {
     console.error("[Clipboard Error]", err);
     showError("📋 Failed to copy. Try manual copy instead.");
@@ -421,13 +422,20 @@ async function copyAsPlainText() {
       return;
     }
     await navigator.clipboard.writeText(text);
-    $("copy-plain-btn").textContent = "Copied As Plain Text!";
+    $("copy-plain-btn").textContent = "Copied as Plain Text!";
     setTimeout(
-      () => ($("copy-plain-btn").textContent = "Copy As Plain Text"),
+      () => ($("copy-plain-btn").textContent = "Copy as Plain Text"),
       2000,
     );
   } catch (err) {
     console.error("[Clipboard Error]", err);
     showError("📋 Failed to copy. Try manual copy instead.");
   }
+}
+
+function clearSummary() {
+  summary = null;
+  $("summary-result").innerHTML = "";
+  $("result-container").classList.add("hidden");
+  hideError();
 }
