@@ -113,6 +113,11 @@ input::placeholder {
   overflow-y: auto;
 }
 
+#copy-btn-container {
+  display: flex;
+  gap: 15px;
+}
+
 #summary-result {
   font-size: 0.9rem;
   line-height: 1.6;

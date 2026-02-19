@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", init);
 
 const $ = (id) => document.getElementById(id);
+let summary = null;
 
 // ============================================================================
 // ERROR HANDLING SYSTEM
@@ -107,7 +108,8 @@ async function init() {
 
   $("save-key").addEventListener("click", saveApiKey);
   $("summarize-btn").addEventListener("click", summarizePage);
-  $("copy-btn").addEventListener("click", copyToClipboard);
+  $("copy-md-btn").addEventListener("click", copyAsMarkdown);
+  $("copy-plain-btn").addEventListener("click", copyAsPlainText);
 }
 
 async function saveApiKey() {
@@ -123,6 +125,7 @@ async function saveApiKey() {
 }
 
 async function summarizePage() {
+  summary = null;
   const stored = await chrome.storage.local.get(["openai_api_key"]);
   const apiKey = stored.openai_api_key;
 
@@ -171,7 +174,7 @@ async function summarizePage() {
       active: true,
       currentWindow: true,
     });
-    const summary = await generateSummary(
+    summary = await generateSummary(
       apiKey,
       pageContent,
       summaryType,
@@ -394,7 +397,23 @@ function hideError() {
   $("error-msg").classList.add("hidden");
 }
 
-async function copyToClipboard() {
+async function copyAsMarkdown() {
+  try {
+    const text = summary;
+    if (!text) {
+      showError("📋 No summary to copy.");
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    $("copy-md-btn").textContent = "Copied As Markdown!";
+    setTimeout(() => ($("copy-md-btn").textContent = "Copy As Markdown"), 2000);
+  } catch (err) {
+    console.error("[Clipboard Error]", err);
+    showError("📋 Failed to copy. Try manual copy instead.");
+  }
+}
+
+async function copyAsPlainText() {
   try {
     const text = $("summary-result")?.textContent;
     if (!text) {
@@ -402,8 +421,11 @@ async function copyToClipboard() {
       return;
     }
     await navigator.clipboard.writeText(text);
-    $("copy-btn").textContent = "Copied!";
-    setTimeout(() => ($("copy-btn").textContent = "Copy to Clipboard"), 2000);
+    $("copy-plain-btn").textContent = "Copied As Plain Text!";
+    setTimeout(
+      () => ($("copy-plain-btn").textContent = "Copy As Plain Text"),
+      2000,
+    );
   } catch (err) {
     console.error("[Clipboard Error]", err);
     showError("📋 Failed to copy. Try manual copy instead.");
