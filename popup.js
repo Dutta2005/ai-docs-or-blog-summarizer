@@ -408,6 +408,13 @@ function hideError() {
   $("error-msg").classList.add("hidden");
 }
 
+function clearSummary() {
+  summary = null;
+  $("summary-result").textContent = "";
+  $("result-container").classList.add("hidden");
+  hideError();
+}
+
 async function copyAsMarkdown() {
   try {
     const text = summary;
@@ -499,30 +506,54 @@ function renderHistory(historyItems) {
 
   historySection.classList.remove("hidden");
 
-  historyItems.forEach(item => {
+  historyItems.forEach((item) => {
     const date = new Date(item.date).toLocaleDateString();
 
     const div = document.createElement("div");
     div.className = "history-item";
-    div.innerHTML = `
-      <div class="history-meta">
-        <span>${date}</span>
-        <span>${item.type}</span>
-      </div>
-      <div class="history-title" title="${item.title}">${item.title}</div>
-      <div class="history-preview">${item.text.slice(0, 100)}...</div>
-      <div class="history-actions">
-        <button class="btn-small copy-btn" data-id="${item.id}">Copy</button>
-      </div>
-    `;
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+
+    const dateSpan = document.createElement("span");
+    dateSpan.textContent = date;
+
+    const typeSpan = document.createElement("span");
+    typeSpan.textContent = item.type || "summary";
+
+    meta.appendChild(dateSpan);
+    meta.appendChild(typeSpan);
+
+    const title = document.createElement("div");
+    title.className = "history-title";
+    title.title = item.title || "Untitled Page";
+    title.textContent = item.title || "Untitled Page";
+
+    const preview = document.createElement("div");
+    preview.className = "history-preview";
+    const previewText = item.text ? item.text.slice(0, 100) : "";
+    preview.textContent = previewText ? `${previewText}...` : "No summary text";
+
+    const actions = document.createElement("div");
+    actions.className = "history-actions";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "btn-small copy-btn";
+    copyBtn.dataset.id = item.id;
+    copyBtn.type = "button";
+    copyBtn.textContent = "Copy";
+
+    actions.appendChild(copyBtn);
+    div.appendChild(meta);
+    div.appendChild(title);
+    div.appendChild(preview);
+    div.appendChild(actions);
 
     // Create closure for copy button
-    const copyBtn = div.querySelector(".copy-btn");
     copyBtn.addEventListener("click", () => {
       navigator.clipboard.writeText(item.text).then(() => {
         const originalText = copyBtn.textContent;
         copyBtn.textContent = "Copied!";
-        setTimeout(() => copyBtn.textContent = originalText, 1500);
+        setTimeout(() => (copyBtn.textContent = originalText), 1500);
       });
     });
 

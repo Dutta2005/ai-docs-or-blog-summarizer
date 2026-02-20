@@ -3,7 +3,10 @@
   "name": "AI Docs or Blog Summarizer",
   "version": "1.0",
   "description": "Summarize any blog or documentation using OpenAI",
-  "permissions": ["activeTab", "storage", "scripting"],
+  "permissions": ["activeTab", "tabs", "storage", "scripting"],
+  "host_permissions": [
+    "https://api.openai.com/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
