@@ -102,7 +102,10 @@ input::placeholder {
 .btn-secondary:hover {
   background: rgba(108, 99, 255, 0.1);
 }
-
+#clear-summary-btn{
+  width: 100%;
+  margin-top: 15px;
+}
 #result-container {
   margin-top: 20px;
   padding: 16px;
