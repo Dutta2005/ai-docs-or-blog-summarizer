@@ -110,6 +110,10 @@ async function init() {
   $("summarize-btn").addEventListener("click", summarizePage);
   $("copy-md-btn").addEventListener("click", copyAsMarkdown);
   $("copy-plain-btn").addEventListener("click", copyAsPlainText);
+  $("clear-history-btn").addEventListener("click", clearHistory);
+
+  // Load history on startup
+  loadHistory();
   $("clear-summary-btn").addEventListener("click", clearSummary);
 }
 
@@ -191,6 +195,12 @@ async function summarizePage() {
     // Safely inject sanitized HTML into the UI
     $("summary-result").innerHTML = cleanHTML;
     $("result-container").classList.remove("hidden");
+
+    // Save to history
+    saveSummary(summary, tab.title, tab.url, summaryType);
+
+    // Refresh history list
+    loadHistory();
   } catch (err) {
     // Check if error is already a structured error object from generateSummary()
     if (err && typeof err === "object" && err.type && err.userMessage) {
@@ -433,9 +443,97 @@ async function copyAsPlainText() {
   }
 }
 
-function clearSummary() {
-  summary = null;
-  $("summary-result").innerHTML = "";
-  $("result-container").classList.add("hidden");
-  hideError();
+
+// ============================================================================
+// HISTORY MANAGEMENT
+// ============================================================================
+
+async function saveSummary(text, title, url, type) {
+  try {
+    const newSummary = {
+      id: Date.now().toString(),
+      text,
+      title: title || "Untitled Page",
+      url: url || "",
+      type,
+      date: new Date().toISOString()
+    };
+
+    const data = await chrome.storage.local.get(["summary_history"]);
+    let history = data.summary_history || [];
+
+    // Add new summary to the beginning
+    history.unshift(newSummary);
+
+    // Keep only last 10 items
+    if (history.length > 10) {
+      history = history.slice(0, 10);
+    }
+
+    await chrome.storage.local.set({ summary_history: history });
+  } catch (err) {
+    console.error("Failed to save summary:", err);
+  }
 }
+
+async function loadHistory() {
+  try {
+    const data = await chrome.storage.local.get(["summary_history"]);
+    const history = data.summary_history || [];
+    renderHistory(history);
+  } catch (err) {
+    console.error("Failed to load history:", err);
+  }
+}
+
+function renderHistory(historyItems) {
+  const historyList = $("history-list");
+  const historySection = $("history-section");
+
+  historyList.innerHTML = "";
+
+  if (historyItems.length === 0) {
+    historySection.classList.add("hidden");
+    return;
+  }
+
+  historySection.classList.remove("hidden");
+
+  historyItems.forEach(item => {
+    const date = new Date(item.date).toLocaleDateString();
+
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.innerHTML = `
+      <div class="history-meta">
+        <span>${date}</span>
+        <span>${item.type}</span>
+      </div>
+      <div class="history-title" title="${item.title}">${item.title}</div>
+      <div class="history-preview">${item.text.slice(0, 100)}...</div>
+      <div class="history-actions">
+        <button class="btn-small copy-btn" data-id="${item.id}">Copy</button>
+      </div>
+    `;
+
+    // Create closure for copy button
+    const copyBtn = div.querySelector(".copy-btn");
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(item.text).then(() => {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => copyBtn.textContent = originalText, 1500);
+      });
+    });
+
+    historyList.appendChild(div);
+  });
+}
+
+async function clearHistory() {
+  if (confirm("Are you sure you want to clear your summary history?")) {
+    await chrome.storage.local.remove("summary_history");
+    renderHistory([]);
+  }
+}
+

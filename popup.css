@@ -40,7 +40,8 @@ label {
   color: #b0b0b0;
 }
 
-input, select {
+input,
+select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #3a3a5c;
@@ -51,7 +52,8 @@ input, select {
   transition: border-color 0.2s;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: #6c63ff;
 }
@@ -102,6 +104,21 @@ input::placeholder {
 .btn-secondary:hover {
   background: rgba(108, 99, 255, 0.1);
 }
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.btn-text:hover {
+  color: #ff4d4d;
+}
+
 #clear-summary-btn{
   width: 100%;
   margin-top: 15px;
@@ -157,7 +174,9 @@ input::placeholder {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 ::-webkit-scrollbar {
@@ -171,4 +190,82 @@ input::placeholder {
 ::-webkit-scrollbar-thumb {
   background: #4a4a6a;
   border-radius: 3px;
+}
+
+/* History Section Styles */
+#history-section {
+  margin-top: 25px;
+  border-top: 1px solid #3a3a5c;
+  padding-top: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.history-item {
+  background: #252540;
+  border: 1px solid #3a3a5c;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  transition: transform 0.2s;
+}
+
+.history-item:hover {
+  transform: translateY(-2px);
+  border-color: #6c63ff;
+}
+
+.history-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.history-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-preview {
+  font-size: 0.85rem;
+  color: #b0b0b0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  background: rgba(108, 99, 255, 0.1);
+  color: #6c63ff;
+  border: 1px solid #6c63ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-small:hover {
+  background: #6c63ff;
+  color: white;
 }
