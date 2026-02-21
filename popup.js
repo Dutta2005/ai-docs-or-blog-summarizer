@@ -24,11 +24,11 @@ const ERROR_TYPES = {
 const USER_MESSAGES = {
   network_error: "🌐 Network error: Please check your internet connection.",
   unauthorized:
-    "🔑 Invalid API key. Please update your OpenAI API key in the extension settings.",
+    "🔑 Invalid API key. Please update your API key in the extension settings.",
   rate_limit:
     "⏱️ Rate limited: Too many requests. Please try again in a few moments.",
   server_error:
-    "🔧 OpenAI service temporarily unavailable. Please try again later.",
+    "🔧 AI service temporarily unavailable. Please try again later.",
   timeout: "⏳ Request timed out. Please try again.",
   invalid_response: "⚠️ Unexpected response from AI service. Please try again.",
   content_extraction_failed:
@@ -100,42 +100,115 @@ function classifyError(error, httpStatus = null) {
 }
 
 async function init() {
-  const stored = await chrome.storage.local.get(["openai_api_key"]);
+  // Load saved provider and API keys
+  const stored = await chrome.storage.local.get([
+    "ai_provider",
+    "openai_api_key",
+    "gemini_api_key",
+    "claude_api_key",
+  ]);
+
+  // Set default provider to OpenAI for backward compatibility
+  const currentProvider = stored.ai_provider || "openai";
+  $("ai-provider").value = currentProvider;
+
+  // Load saved API keys
   if (stored.openai_api_key) {
-    $("api-key").value = stored.openai_api_key;
-    $("key-status").textContent = "✓ API key saved";
+    $("openai-api-key").value = stored.openai_api_key;
+  }
+  if (stored.gemini_api_key) {
+    $("gemini-api-key").value = stored.gemini_api_key;
+  }
+  if (stored.claude_api_key) {
+    $("claude-api-key").value = stored.claude_api_key;
   }
 
-  $("save-key").addEventListener("click", saveApiKey);
+  // Show the correct API key input group
+  updateProviderUI(currentProvider);
+
+  // Display key status if any key is saved
+  const currentKey = stored[`${currentProvider}_api_key`];
+  if (currentKey) {
+    $("key-status").textContent = "✓ API key saved";
+    $("key-status").style.color = "#4ade80";
+  }
+
+  // Event listeners
+  $("ai-provider").addEventListener("change", handleProviderChange);
+  $("save-openai-key").addEventListener("click", () => saveApiKey("openai"));
+  $("save-gemini-key").addEventListener("click", () => saveApiKey("gemini"));
+  $("save-claude-key").addEventListener("click", () => saveApiKey("claude"));
   $("summarize-btn").addEventListener("click", summarizePage);
   $("copy-md-btn").addEventListener("click", copyAsMarkdown);
   $("copy-plain-btn").addEventListener("click", copyAsPlainText);
   $("clear-history-btn").addEventListener("click", clearHistory);
+  $("clear-summary-btn").addEventListener("click", clearSummary);
 
   // Load history on startup
   loadHistory();
-  $("clear-summary-btn").addEventListener("click", clearSummary);
 }
 
-async function saveApiKey() {
-  const key = $("api-key").value.trim();
+/**
+ * Handle provider selection change
+ */
+async function handleProviderChange() {
+  const provider = $("ai-provider").value;
+  await chrome.storage.local.set({ ai_provider: provider });
+  updateProviderUI(provider);
+
+  // Update key status based on selected provider
+  const stored = await chrome.storage.local.get([`${provider}_api_key`]);
+  const currentKey = stored[`${provider}_api_key`];
+  if (currentKey) {
+    $("key-status").textContent = "✓ API key saved";
+    $("key-status").style.color = "#4ade80";
+  } else {
+    $("key-status").textContent = "";
+  }
+}
+
+/**
+ * Update UI to show/hide appropriate API key input
+ */
+function updateProviderUI(provider) {
+  // Hide all API key groups
+  $("openai-key-group").classList.add("hidden");
+  $("gemini-key-group").classList.add("hidden");
+  $("claude-key-group").classList.add("hidden");
+
+  // Show the selected provider's API key group
+  const targetGroup = $(`${provider}-key-group`);
+  if (targetGroup) {
+    targetGroup.classList.remove("hidden");
+  }
+}
+
+async function saveApiKey(provider) {
+  const key = $(`${provider}-api-key`).value.trim();
   if (!key) {
     $("key-status").textContent = "✗ Please enter a valid key";
     $("key-status").style.color = "#f87171";
     return;
   }
-  await chrome.storage.local.set({ openai_api_key: key });
+  await chrome.storage.local.set({ [`${provider}_api_key`]: key });
   $("key-status").textContent = "✓ API key saved";
   $("key-status").style.color = "#4ade80";
 }
 
 async function summarizePage() {
   summary = null;
-  const stored = await chrome.storage.local.get(["openai_api_key"]);
-  const apiKey = stored.openai_api_key;
+  const stored = await chrome.storage.local.get([
+    "ai_provider",
+    "openai_api_key",
+    "gemini_api_key",
+    "claude_api_key",
+  ]);
+
+  const provider = stored.ai_provider || "openai";
+  const apiKey = stored[`${provider}_api_key`];
 
   if (!apiKey) {
-    showError("🔑 Please save your OpenAI API key first.");
+    showError("🔑 Please save your API key first.");
     return;
   }
 
@@ -180,6 +253,7 @@ async function summarizePage() {
       currentWindow: true,
     });
     summary = await generateSummary(
+      provider,
       apiKey,
       pageContent,
       summaryType,
@@ -259,126 +333,69 @@ function extractPageContent() {
 
 /**
  * Generate summary with comprehensive error handling, timeout, and proper validation
+ * Routes to the appropriate AI provider
  * @throws {Error} Throws user-friendly error messages
  */
-async function generateSummary(apiKey, content, type, title) {
-  const prompts = {
-    brief: `Summarize this article in 2-3 clear sentences. Focus on the main point.`,
-    detailed: `Provide a detailed summary with key points as bullet points. Include main arguments and conclusions.`,
-    technical: `Summarize this technical documentation. Include: purpose, key concepts, important functions/methods, and usage notes.`,
+async function generateSummary(provider, apiKey, content, type, title) {
+  // Get the appropriate provider
+  const providers = {
+    openai: window.OpenAIProvider,
+    gemini: window.GeminiProvider,
+    claude: window.ClaudeProvider,
   };
+
+  const aiProvider = providers[provider];
+  if (!aiProvider) {
+    throw {
+      type: ERROR_TYPES.UNKNOWN,
+      userMessage: `Unknown AI provider: ${provider}`,
+      debugInfo: `Provider ${provider} not found`,
+    };
+  }
 
   // Setup timeout (30 seconds)
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    // Make API request with timeout
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful assistant that summarizes web content clearly and concisely.",
-          },
-          {
-            role: "user",
-            content: `${prompts[type]}\n\nTitle: ${title}\n\nContent:\n${content}`,
-          },
-        ],
-        max_tokens: 1000,
-        temperature: 0.5,
-      }),
-    });
-
-    // Handle non-OK responses
-    if (!response.ok) {
-      let apiErrorMessage = null;
-
-      // Try to extract error details from API response
-      try {
-        const errorData = await response.json();
-        apiErrorMessage = errorData.error?.message;
-
-        // Log full error for debugging
-        console.error("[API Error Debug]", {
-          status: response.status,
-          errorData: errorData,
-        });
-      } catch (parseErr) {
-        // Response was not JSON (e.g., network error, server error)
-        console.error("[API Error - Non-JSON Response]", {
-          status: response.status,
-          statusText: response.statusText,
-        });
-      }
-
-      // Classify error and get user-friendly message
-      const errorInfo = classifyError(
-        new Error(apiErrorMessage || `HTTP ${response.status}`),
-        response.status,
-      );
-
-      console.error("[Classified Error]", {
-        type: errorInfo.type,
-        debugInfo: errorInfo.debugInfo,
-      });
-
-      throw errorInfo; // Throw structured object, not new Error
-    }
-
-    // Parse successful response
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseErr) {
-      console.error("[Response Parse Error]", parseErr);
-      const errorInfo = classifyError(parseErr, null);
-      throw errorInfo; // Throw structured object
-    }
-
-    // Validate response structure
-    if (!data.choices?.[0]?.message?.content) {
-      console.error("[Invalid Response Structure]", {
-        hasChoices: !!data.choices,
-        hasMessage: !!data.choices?.[0]?.message,
-        data: data,
-      });
-      const errorInfo = classifyError(
-        new Error("Invalid response structure"),
-        null,
-      );
-      throw errorInfo; // Throw structured object
-    }
-
-    return data.choices[0].message.content;
+    // Call the provider's generateSummary method
+    const result = await aiProvider.generateSummary(
+      apiKey,
+      content,
+      type,
+      title,
+      controller.signal,
+    );
+    return result;
   } catch (error) {
-    // Handle specific error types
-
-    // Timeout (AbortError)
+    // Handle timeout (AbortError)
     if (error?.name === "AbortError") {
       console.error("[Timeout Error]", "Request exceeded 30 second limit");
       const errorInfo = classifyError(error, null);
-      throw errorInfo; // Throw structured object
+      throw errorInfo;
     }
 
-    // Network errors (TypeError from fetch)
+    // Handle network errors (TypeError from fetch)
     if (error instanceof TypeError) {
       const errorInfo = classifyError(error, null);
       console.error("[Network Error]", errorInfo.debugInfo);
-      throw errorInfo; // Throw structured object
+      throw errorInfo;
     }
 
-    // Re-throw already processed structured errors
-    throw error;
+    // Handle HTTP status errors from providers
+    if (error.httpStatus) {
+      const errorInfo = classifyError(
+        new Error(error.message || `HTTP ${error.httpStatus}`),
+        error.httpStatus,
+      );
+      console.error("[Provider Error]", errorInfo);
+      throw errorInfo;
+    }
+
+    // Handle other errors
+    const errorInfo = classifyError(error, null);
+    console.error("[Generation Error]", errorInfo);
+    throw errorInfo;
   } finally {
     clearTimeout(timeoutId);
   }

@@ -33,6 +33,14 @@ h2 {
   margin-bottom: 16px;
 }
 
+.api-key-group {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.api-key-group.hidden {
+  display: none;
+}
+
 label {
   display: block;
   font-size: 0.85rem;

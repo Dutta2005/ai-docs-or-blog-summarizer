@@ -12,10 +12,32 @@
 
       <div id="settings-section">
         <div class="input-group">
-          <label for="api-key">OpenAI API Key</label>
-          <input type="password" id="api-key" placeholder="sk-..." />
-          <button id="save-key" class="btn-secondary">Save Key</button>
+          <label for="ai-provider">AI Provider</label>
+          <select id="ai-provider">
+            <option value="openai" selected>OpenAI (GPT-4)</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="claude">Claude (Anthropic)</option>
+          </select>
         </div>
+
+        <div class="input-group api-key-group" id="openai-key-group">
+          <label for="openai-api-key">OpenAI API Key</label>
+          <input type="password" id="openai-api-key" placeholder="sk-..." />
+          <button id="save-openai-key" class="btn-secondary">Save Key</button>
+        </div>
+
+        <div class="input-group api-key-group hidden" id="gemini-key-group">
+          <label for="gemini-api-key">Google Gemini API Key</label>
+          <input type="password" id="gemini-api-key" placeholder="AI..." />
+          <button id="save-gemini-key" class="btn-secondary">Save Key</button>
+        </div>
+
+        <div class="input-group api-key-group hidden" id="claude-key-group">
+          <label for="claude-api-key">Claude API Key</label>
+          <input type="password" id="claude-api-key" placeholder="sk-ant-..." />
+          <button id="save-claude-key" class="btn-secondary">Save Key</button>
+        </div>
+
         <p id="key-status" class="status"></p>
       </div>
 
@@ -62,6 +84,9 @@
     </div>
     <script src="marked.umd.js"></script>
     <script src="purify.min.js"></script>
+    <script src="providers/openai.js"></script>
+    <script src="providers/gemini.js"></script>
+    <script src="providers/claude.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
