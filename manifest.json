@@ -2,10 +2,12 @@
   "manifest_version": 3,
   "name": "AI Docs or Blog Summarizer",
   "version": "1.0",
-  "description": "Summarize any blog or documentation using OpenAI",
+  "description": "Summarize any blog or documentation using OpenAI, Google Gemini, or Claude",
   "permissions": ["activeTab", "tabs", "storage", "scripting"],
   "host_permissions": [
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
