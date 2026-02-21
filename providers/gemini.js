@@ -5,7 +5,7 @@
 const GeminiProvider = {
   name: "Google Gemini",
   apiEndpoint: "https://generativelanguage.googleapis.com/v1beta/models",
-  defaultModel: "gemini-2.0-flash",
+  defaultModel: "gemini-2.5-flash",
 
   /**
    * Generate summary using Google Gemini API

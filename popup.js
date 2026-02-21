@@ -25,6 +25,10 @@ const USER_MESSAGES = {
   network_error: "🌐 Network error: Please check your internet connection.",
   unauthorized:
     "🔑 Invalid API key. Please update your API key in the extension settings.",
+  forbidden:
+    "🚫 Request blocked by the AI provider. Check provider requirements and account permissions.",
+  bad_request:
+    "⚠️ Request rejected by AI service. Check model name, account access, or request format.",
   rate_limit:
     "⏱️ Rate limited: Too many requests. Please try again in a few moments.",
   server_error:
@@ -43,6 +47,20 @@ const USER_MESSAGES = {
  * @returns {Object} {type, userMessage, debugInfo}
  */
 function classifyError(error, httpStatus = null) {
+  const errorMessage = (error?.message || "").toLowerCase();
+
+  if (
+    errorMessage.includes("dangerous-direct-browser-access") ||
+    errorMessage.includes("browser")
+  ) {
+    return {
+      type: ERROR_TYPES.UNAUTHORIZED,
+      userMessage:
+        "⚠️ Claude browser request blocked. The extension must send Anthropic's browser-access header.",
+      debugInfo: error?.message || "Browser access restriction",
+    };
+  }
+
   // Network/fetch errors (TypeError)
   if (error instanceof TypeError) {
     if (
@@ -68,11 +86,25 @@ function classifyError(error, httpStatus = null) {
 
   // HTTP status errors
   if (httpStatus) {
-    if (httpStatus === 400 || httpStatus === 401 || httpStatus === 403) {
+    if (httpStatus === 400) {
+      return {
+        type: ERROR_TYPES.INVALID_RESPONSE,
+        userMessage: USER_MESSAGES.bad_request,
+        debugInfo: `HTTP 400: Bad request`,
+      };
+    }
+    if (httpStatus === 401) {
       return {
         type: ERROR_TYPES.UNAUTHORIZED,
         userMessage: USER_MESSAGES.unauthorized,
         debugInfo: `HTTP ${httpStatus}: Unauthorized / Bad API key`,
+      };
+    }
+    if (httpStatus === 403) {
+      return {
+        type: ERROR_TYPES.UNAUTHORIZED,
+        userMessage: USER_MESSAGES.forbidden,
+        debugInfo: `HTTP 403: Forbidden`,
       };
     }
     if (httpStatus === 429) {
