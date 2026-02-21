@@ -6,8 +6,7 @@
 const ClaudeProvider = {
   name: "Claude (Anthropic)",
   apiEndpoint: "https://api.anthropic.com/v1/messages",
-  defaultModel: "claude-3-haiku-20240307",
-  supportsMultimodal: true,
+  defaultModel: "claude-sonnet-4-6",
 
   /**
    * Generate summary using Claude API (with optional image context)
@@ -54,6 +53,7 @@ const ClaudeProvider = {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
       },
       body: JSON.stringify({
         model: this.defaultModel,
