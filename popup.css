@@ -127,10 +127,11 @@ input::placeholder {
   color: #ff4d4d;
 }
 
-#clear-summary-btn{
+#clear-summary-btn {
   width: 100%;
   margin-top: 15px;
 }
+
 #result-container {
   margin-top: 20px;
   padding: 16px;
@@ -171,6 +172,30 @@ input::placeholder {
 
 .hidden {
   display: none !important;
+}
+
+.image-indicator {
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  min-height: 0;
+}
+
+.image-indicator:empty {
+  display: none;
+}
+
+.image-indicator.img-found {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.image-indicator.img-skipped {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .loader {

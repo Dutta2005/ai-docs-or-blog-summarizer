@@ -224,19 +224,48 @@ async function summarizePage() {
   hideError();
   $("result-container").classList.add("hidden");
 
+  // Hoist these so they're accessible throughout the full try block
+  let pageContent;
+  let extractedImages = [];
+  let tab;
+
   try {
-    let pageContent;
     try {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
+      [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+      // Guard: Chrome blocks content scripts on internal/restricted pages
+      const restrictedPrefixes = ["chrome://", "chrome-extension://", "about:", "edge://", "file://"];
+      if (restrictedPrefixes.some((prefix) => tab.url?.startsWith(prefix))) {
+        setLoading(false);
+        showError("🚫 Cannot summarize this page. Please open a website (e.g. a blog or docs page) and try again.");
+        return;
+      }
+
       const [{ result: extractedContent }] =
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func: extractPageContent,
         });
-      pageContent = extractedContent;
+      pageContent = extractedContent.text;
+      extractedImages = extractedContent.images || [];
+
+      // Show image indicator
+      const providerObj = {
+        openai: window.OpenAIProvider,
+        gemini: window.GeminiProvider,
+        claude: window.ClaudeProvider,
+      }[provider];
+      const imgIndicator = $("image-indicator");
+      if (extractedImages.length > 0 && providerObj?.supportsMultimodal) {
+        imgIndicator.textContent = `🖼️ ${extractedImages.length} image${extractedImages.length > 1 ? "s" : ""} detected — included in summary`;
+        imgIndicator.className = "image-indicator img-found";
+      } else if (extractedImages.length > 0) {
+        imgIndicator.textContent = `🖼️ ${extractedImages.length} image${extractedImages.length > 1 ? "s" : ""} detected — not supported by this provider`;
+        imgIndicator.className = "image-indicator img-skipped";
+      } else {
+        imgIndicator.textContent = "";
+        imgIndicator.className = "image-indicator";
+      }
     } catch (extractErr) {
       console.error("[Content Extraction Error]", extractErr);
       throw {
@@ -256,16 +285,13 @@ async function summarizePage() {
     }
 
     const summaryType = $("summary-type").value;
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
     summary = await generateSummary(
       provider,
       apiKey,
       pageContent,
       summaryType,
       tab.title,
+      extractedImages,
     );
 
     // Convert Markdown to raw HTML
@@ -334,9 +360,39 @@ function extractPageContent() {
     content = document.body.innerText;
   }
 
-  // Clean and truncate
+  // Clean and truncate text
   content = content.replace(/\s+/g, " ").trim();
-  return content.slice(0, 12000);
+
+  // Extract meaningful content images:
+  // - Prefer images within article/main content containers
+  // - Minimum 200x200px to filter out icons, avatars, and ads
+  // - HTTPS only, max 2 images to keep API payload manageable
+  const contentSelectors = ["article", "main", ".post-content", ".entry-content", ".markdown-body", "#content"];
+  let imgPool = [];
+  for (const sel of contentSelectors) {
+    const el = document.querySelector(sel);
+    if (el) {
+      imgPool = Array.from(el.querySelectorAll("img"));
+      break;
+    }
+  }
+  if (imgPool.length === 0) {
+    imgPool = Array.from(document.querySelectorAll("img"));
+  }
+
+  const images = imgPool
+    .filter((img) => {
+      const src = img.src || "";
+      return (
+        src.startsWith("https://") &&
+        img.naturalWidth > 200 &&
+        img.naturalHeight > 200
+      );
+    })
+    .slice(0, 2)
+    .map((img) => ({ url: img.src, alt: img.alt || "" }));
+
+  return { text: content.slice(0, 12000), images };
 }
 
 /**
@@ -344,7 +400,7 @@ function extractPageContent() {
  * Routes to the appropriate AI provider
  * @throws {Error} Throws user-friendly error messages
  */
-async function generateSummary(provider, apiKey, content, type, title) {
+async function generateSummary(provider, apiKey, content, type, title, images = []) {
   // Get the appropriate provider
   const providers = {
     openai: window.OpenAIProvider,
@@ -361,6 +417,9 @@ async function generateSummary(provider, apiKey, content, type, title) {
     };
   }
 
+  // Only pass images if provider supports multimodal
+  const imagesToPass = aiProvider.supportsMultimodal ? images : [];
+
   // Setup timeout (30 seconds)
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -373,6 +432,7 @@ async function generateSummary(provider, apiKey, content, type, title) {
       type,
       title,
       controller.signal,
+      imagesToPass,
     );
     return result;
   } catch (error) {
