@@ -234,6 +234,7 @@ async function init() {
     "openai_api_key",
     "gemini_api_key",
     "claude_api_key",
+    "theme",
   ]);
 
   // Set default provider to OpenAI for backward compatibility
@@ -250,6 +251,10 @@ async function init() {
   if (stored.claude_api_key) {
     $("claude-api-key").value = stored.claude_api_key;
   }
+
+  // Load and apply saved theme (default to dark)
+  const savedTheme = stored.theme || "dark";
+  applyTheme(savedTheme);
 
   // Show the correct API key input group
   updateProviderUI(currentProvider);
@@ -272,6 +277,7 @@ async function init() {
   $("download-md-btn").addEventListener("click", downloadAsMarkdown);
   $("clear-history-btn").addEventListener("click", clearHistory);
   $("clear-summary-btn").addEventListener("click", clearSummary);
+  $("theme-toggle").addEventListener("click", toggleTheme);
 
   // Load history on startup
   loadHistory();
@@ -282,6 +288,34 @@ async function init() {
     await chrome.storage.session.remove(['autoSummarize']);
     setTimeout(() => $("summarize-btn")?.click(), 100);
   }
+}
+
+/**
+ * Apply the theme to the body
+ * @param {string} theme - 'dark' or 'light'
+ */
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.body.classList.add("light-theme");
+    $("theme-icon").textContent = "☀️";
+  } else {
+    document.body.classList.remove("light-theme");
+    $("theme-icon").textContent = "🌙";
+  }
+}
+
+/**
+ * Toggle between dark and light theme
+ */
+async function toggleTheme() {
+  const isLightTheme = document.body.classList.contains("light-theme");
+  const newTheme = isLightTheme ? "dark" : "light";
+  
+  // Apply the new theme
+  applyTheme(newTheme);
+  
+  // Save the theme preference to Chrome Storage
+  await chrome.storage.local.set({ theme: newTheme });
 }
 
 /**
