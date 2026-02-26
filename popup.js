@@ -257,7 +257,7 @@ const TOKEN_LIMITS = {
  * Maximum content length to extract (increased from 12000)
  * This allows for larger pages while still being manageable
  */
-const MAX_CONTENT_LENGTH = 50000;
+const MAX_CONTENT_LENGTH = 400000;
 
 
 /**
@@ -559,12 +559,16 @@ async function summarizePage() {
         return;
       }
 
-      const [{ result: extractedContent }] =
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: extractPageContent,
-          args: [MAX_CONTENT_LENGTH],
-        });
+const [{ result: extractedContent }] =
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: extractPageContent,
+    args: [Math.min(
+      MAX_CONTENT_LENGTH,
+      (TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai).safeLimit *
+        (TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai).charsPerToken
+    )],
+  });
       pageContent = extractedContent.text;
       extractedImages = extractedContent.images || [];
 
