@@ -129,6 +129,32 @@ function checkContentLimit(content, provider) {
 }
 
 /**
+ * Remove code blocks from content before sending to AI
+ * Removes markdown code blocks, inline code, and HTML pre/code elements
+ * @param {string} content - The page content
+ * @returns {string} - Content with code blocks removed
+ */
+function stripCodeBlocks(content) {
+  if (!content) return content;
+  
+  // Pattern 1: Remove markdown code blocks (```...```)
+  let cleaned = content.replace(/```[\s\S]*?```/g, '');
+  
+  // Pattern 2: Remove inline code (`...`)
+  cleaned = cleaned.replace(/`[^`]+`/g, '');
+  
+  // Pattern 3: Remove HTML pre and code tags and their content
+  cleaned = cleaned.replace(/<pre>[\s\S]*?<\/pre>/gi, '');
+  cleaned = cleaned.replace(/<code>[\s\S]*?<\/code>/gi, '');
+  
+  // Clean up extra whitespace created by removals
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  cleaned = cleaned.replace(/\s{3,}/g, ' ');
+  
+  return cleaned.trim();
+}
+
+/**
  * Intelligently trim content to fit within token limit
  * Tries to preserve complete sentences and important content
  * @param {string} content - The content to trim
@@ -136,6 +162,7 @@ function checkContentLimit(content, provider) {
  * @returns {string} - Trimmed content
  */
 function trimContent(content, maxChars) {
+
   if (content.length <= maxChars) {
     return content;
   }
@@ -388,7 +415,9 @@ async function init() {
     "gemini_api_key",
     "claude_api_key",
     "theme",
+    "exclude_code_blocks",
   ]);
+
 
   // Set default provider to OpenAI for backward compatibility
   const currentProvider = stored.ai_provider || "openai";
@@ -409,8 +438,12 @@ async function init() {
   const savedTheme = stored.theme || "dark";
   applyTheme(savedTheme);
 
+  // Load exclude code blocks preference
+  $("exclude-code-blocks").checked = stored.exclude_code_blocks || false;
+
   // Show the correct API key input group
   updateProviderUI(currentProvider);
+
 
   // Display key status if any key is saved
   const currentKey = stored[`${currentProvider}_api_key`];
@@ -432,10 +465,14 @@ async function init() {
   $("clear-summary-btn").addEventListener("click", clearSummary);
   $("theme-toggle").addEventListener("click", toggleTheme);
   $("retry-btn").addEventListener("click", retrySummarize);
+  $("exclude-code-blocks").addEventListener("change", async (e) => {
+    await chrome.storage.local.set({ exclude_code_blocks: e.target.checked });
+  });
 
   // Load history on startup
   loadHistory();
 }
+
 
 /**
  * Apply the theme to the body
@@ -569,10 +606,17 @@ async function summarizePage() {
         extractedImages
       };
 
-  // Display content word count and reading time
-  updateContentStats(pageContent);
+      // Check if code blocks should be excluded
+      const excludeCodeBlocks = $("exclude-code-blocks").checked;
+      if (excludeCodeBlocks) {
+        pageContent = stripCodeBlocks(pageContent);
+      }
 
-  // Check content limits and show warnings if needed
+      // Display content word count and reading time
+      updateContentStats(pageContent);
+
+      // Check content limits and show warnings if needed
+
   const limitCheck = checkContentLimit(pageContent, provider);
   
   if (limitCheck.isOverLimit) {
@@ -699,7 +743,8 @@ async function retrySummarize() {
     return;
   }
 
-  const { provider, apiKey, pageContent, summaryType, title, extractedImages } = lastSummarizeContext;
+  const { provider, apiKey, pageContent, summaryType, title, extractedImages, excludeCodeBlocks } = lastSummarizeContext;
+
 
   setLoading(true);
   hideError();
@@ -707,14 +752,21 @@ async function retrySummarize() {
   $("result-container").classList.add("hidden");
 
   try {
+    // Re-apply code block exclusion if it was enabled
+    let contentToSend = pageContent;
+    if (excludeCodeBlocks) {
+      contentToSend = stripCodeBlocks(pageContent);
+    }
+
     summary = await generateSummary(
       provider,
       apiKey,
-      pageContent,
+      contentToSend,
       summaryType,
       title,
       extractedImages,
     );
+
 
     // Convert Markdown to raw HTML
     const rawHTML = marked.parse(summary);
