@@ -364,6 +364,7 @@ async function saveApiKey(provider) {
 
 async function summarizePage() {
   summary = null;
+  lastSummarizeContext = null;
   const stored = await chrome.storage.local.get([
     "ai_provider",
     "openai_api_key",
@@ -492,7 +493,9 @@ async function summarizePage() {
     if (err && typeof err === "object" && err.type && err.userMessage) {
       // Already classified, use directly
       showError(err.userMessage);
-      showRetryButton();
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: err.type,
         debugInfo: err.debugInfo,
@@ -502,7 +505,9 @@ async function summarizePage() {
       // New error (from content extraction, validation, etc.), classify it once
       const errorInfo = classifyError(err, null);
       showError(errorInfo.userMessage);
-      showRetryButton();
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: errorInfo.type,
         debugInfo: errorInfo.debugInfo,
