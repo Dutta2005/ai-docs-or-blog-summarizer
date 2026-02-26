@@ -222,7 +222,44 @@ input::placeholder {
   border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
+.limit-warning {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.limit-warning::before {
+  content: "⚠️";
+  font-size: 1rem;
+}
+
+.trim-notice {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trim-notice::before {
+  content: "✂️";
+  font-size: 1rem;
+}
+
 .content-stats,
+
 .summary-stats {
   font-size: 0.8rem;
   color: #a0a0a0;
@@ -285,6 +322,7 @@ input::placeholder {
   margin-top: 25px;
   border-top: 1px solid #3a3a5c;
   padding-top: 20px;
+  margin: 10px;
 }
 
 .section-header {
@@ -494,4 +532,17 @@ body.light-theme ::-webkit-scrollbar-track {
 
 body.light-theme ::-webkit-scrollbar-thumb {
   background: #a0aec0;
+}
+
+/* Light theme styles for limit warning and trim notice */
+body.light-theme .limit-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+body.light-theme .trim-notice {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.4);
 }

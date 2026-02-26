@@ -96,8 +96,125 @@ function updateSummaryStats(summaryText) {
 }
 
 // ============================================================================
+// TOKEN LIMIT & CONTENT TRIMMING UTILITIES
+// ============================================================================
+
+/**
+ * Estimate token count from character count
+ * Uses approximate ratio of 4 characters per token
+ * @param {number} charCount - Number of characters
+ * @returns {number} - Estimated token count
+ */
+function estimateTokens(charCount) {
+  return Math.ceil(charCount / 4);
+}
+
+/**
+ * Check if content exceeds safe token limits for a provider
+ * @param {string} content - The content to check
+ * @param {string} provider - The AI provider name
+ * @returns {Object} - { isOverLimit: boolean, estimatedTokens: number, safeLimit: number }
+ */
+function checkContentLimit(content, provider) {
+  const limits = TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai;
+  const estimatedTokens = estimateTokens(content.length);
+  
+  return {
+    isOverLimit: estimatedTokens > limits.safeLimit,
+    estimatedTokens,
+    safeLimit: limits.safeLimit,
+    maxTokens: limits.maxTokens,
+    charsPerToken: limits.charsPerToken,
+  };
+}
+
+/**
+ * Intelligently trim content to fit within token limit
+ * Tries to preserve complete sentences and important content
+ * @param {string} content - The content to trim
+ * @param {number} maxChars - Maximum characters allowed
+ * @returns {string} - Trimmed content
+ */
+function trimContent(content, maxChars) {
+  if (content.length <= maxChars) {
+    return content;
+  }
+  
+  // Try to trim at a sentence boundary
+  const trimmed = content.slice(0, maxChars);
+  
+  // Find the last sentence ending (., !, ? followed by space or end)
+  const lastSentenceEnd = Math.max(
+    trimmed.lastIndexOf('. '),
+    trimmed.lastIndexOf('! '),
+    trimmed.lastIndexOf('? ')
+  );
+  
+  if (lastSentenceEnd > maxChars * 0.8) {
+    // If we found a sentence end in the last 20%, use it
+    return trimmed.slice(0, lastSentenceEnd + 1);
+  }
+  
+  // Otherwise, try to trim at a word boundary
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace > maxChars * 0.9) {
+    return trimmed.slice(0, lastSpace);
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Show limit warning in the UI
+ * @param {number} estimatedTokens - Estimated token count
+ * @param {number} safeLimit - Safe token limit for the provider
+ */
+function showLimitWarning(estimatedTokens, safeLimit) {
+  const warningEl = $('limit-warning');
+  if (!warningEl) return;
+  
+  warningEl.innerHTML = `
+    <span>Content is very long (~${estimatedTokens.toLocaleString()} tokens). 
+    May exceed ${safeLimit.toLocaleString()} token safe limit. 
+    Consider using a shorter page or the summary may be truncated. Estimate is approximate — may vary for code or non-Latin text.</span>
+  `;
+  warningEl.classList.remove('hidden');
+}
+
+/**
+ * Show trim notice in the UI
+ * @param {number} originalLength - Original content length
+ * @param {number} trimmedLength - Trimmed content length
+ */
+function showTrimNotice(originalLength, trimmedLength) {
+  const noticeEl = $('trim-notice');
+  if (!noticeEl) return;
+  
+  const percentKept = Math.round((trimmedLength / originalLength) * 100);
+  const tokensSaved = estimateTokens(originalLength - trimmedLength);
+  
+  noticeEl.innerHTML = `
+    <span>Content automatically trimmed from ${originalLength.toLocaleString()} to 
+    ${trimmedLength.toLocaleString()} characters (${percentKept}% kept, ~${tokensSaved} tokens saved) 
+    to fit within safe limits.</span>
+  `;
+  noticeEl.classList.remove('hidden');
+}
+
+/**
+ * Hide limit warning and trim notice
+ */
+function hideLimitWarnings() {
+  const warningEl = $('limit-warning');
+  const noticeEl = $('trim-notice');
+  if (warningEl) warningEl.classList.add('hidden');
+  if (noticeEl) noticeEl.classList.add('hidden');
+}
+
+// ============================================================================
 // ERROR HANDLING SYSTEM
 // ============================================================================
+
 
 const ERROR_TYPES = {
   NETWORK_ERROR: "network_error",
@@ -109,6 +226,39 @@ const ERROR_TYPES = {
   CONTENT_EXTRACTION_FAILED: "content_extraction_failed",
   UNKNOWN: "unknown",
 };
+
+// ============================================================================
+// TOKEN LIMIT CONFIGURATION
+// ============================================================================
+
+/**
+ * Token limits for each AI provider (in tokens)
+ * These are conservative limits to ensure safe operation
+ */
+const TOKEN_LIMITS = {
+  openai: {
+    maxTokens: 128000,    // GPT-4o-mini context window
+    safeLimit: 100000,    // Conservative limit for safety
+    charsPerToken: 4,     // Approximate chars per token
+  },
+  gemini: {
+    maxTokens: 1048576,   // Gemini 2.5 Flash context window
+    safeLimit: 800000,    // Conservative limit
+    charsPerToken: 4,
+  },
+  claude: {
+    maxTokens: 200000,    // Claude Sonnet context window
+    safeLimit: 150000,    // Conservative limit
+    charsPerToken: 4,
+  },
+};
+
+/**
+ * Maximum content length to extract (increased from 12000)
+ * This allows for larger pages while still being manageable
+ */
+const MAX_CONTENT_LENGTH = 400000;
+
 
 /**
  * User-friendly error messages (no technical jargon or raw API errors)
@@ -409,16 +559,51 @@ async function summarizePage() {
         return;
       }
 
-      const [{ result: extractedContent }] =
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: extractPageContent,
-        });
+const [{ result: extractedContent }] =
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: extractPageContent,
+    args: [Math.min(
+      MAX_CONTENT_LENGTH,
+      (TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai).safeLimit *
+        (TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai).charsPerToken
+    )],
+  });
       pageContent = extractedContent.text;
       extractedImages = extractedContent.images || [];
 
       // Display content word count and reading time
       updateContentStats(pageContent);
+
+      // Check content limits and show warnings if needed
+      let trimmedContent = pageContent;
+      const limitCheck = checkContentLimit(trimmedContent, provider);
+
+      if (limitCheck.isOverLimit) {
+        // Show warning before trimming
+        showLimitWarning(limitCheck.estimatedTokens, limitCheck.safeLimit);
+
+        // Calculate safe character limit
+        const safeCharLimit = limitCheck.safeLimit * limitCheck.charsPerToken;
+
+        // Trim content intelligently if it exceeds safe limit
+        if (trimmedContent.length > safeCharLimit) {
+          const originalLength = trimmedContent.length;
+          trimmedContent = trimContent(trimmedContent, safeCharLimit);
+
+          // Show trim notice
+          showTrimNotice(originalLength, trimmedContent.length);
+
+          // Update stats display with trimmed content
+          updateContentStats(trimmedContent);
+        }
+      } else {
+        // Hide any previous warnings
+        hideLimitWarnings();
+      }
+
+      pageContent = trimmedContent;
+
 
       // Show image indicator
       const providerObj = {
@@ -531,8 +716,8 @@ async function summarizePage() {
  */
 async function retrySummarize() {
   if (!lastSummarizeContext) {
-    showError("No previous request to retry. Please try again from the beginning.");
     hideRetryButton();
+    showError("No previous request to retry. Please try again from the beginning.");
     return;
   }
 
@@ -558,6 +743,7 @@ async function retrySummarize() {
       summaryType,
       title,
       extractedImages,
+      url,
     );
 
     // Convert Markdown to raw HTML
@@ -606,10 +792,11 @@ async function retrySummarize() {
     }
   } finally {
     setLoading(false);
+    $("retry-btn").disabled = false;
   }
 }
 
-function extractPageContent() {
+function extractPageContent(maxLength) {
   const selectors = [
     "article",
     "main",
@@ -667,7 +854,10 @@ function extractPageContent() {
     .slice(0, 2)
     .map((img) => ({ url: img.src, alt: img.alt || "" }));
 
-  return { text: content.slice(0, 12000), images };
+  // Return full content for client-side trimming based on provider limits
+  // The content will be intelligently trimmed in summarizePage() if needed
+  return { text: content.slice(0, maxLength), images };
+
 }
 
 /**
@@ -766,6 +956,11 @@ function showError(msg) {
   errorElement.textContent = msg;
   errorElement.classList.remove("hidden");
   errorElement.style.display = "block";
+  if (lastSummarizeContext) {
+    showRetryButton();
+  } else {
+    hideRetryButton();
+  }
   console.warn("[UI Error]", msg);
 }
 
@@ -795,6 +990,7 @@ function clearSummary() {
   hideRetryButton();
   lastSummarizeContext = null;
 }
+
 
 async function copyAsMarkdown() {
   try {
