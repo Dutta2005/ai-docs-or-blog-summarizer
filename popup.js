@@ -435,6 +435,13 @@ async function init() {
 
   // Load history on startup
   loadHistory();
+
+  // Auto-click summarize button if opened via keyboard shortcut
+  const shortcutData = await chrome.storage.session.get(['autoSummarize']);
+  if (shortcutData.autoSummarize) {
+    await chrome.storage.session.remove(['autoSummarize']);
+    setTimeout(() => $("summarize-btn")?.click(), 100);
+  }
 }
 
 /**
@@ -514,6 +521,7 @@ async function saveApiKey(provider) {
 
 async function summarizePage() {
   summary = null;
+  lastSummarizeContext = null;
   const stored = await chrome.storage.local.get([
     "ai_provider",
     "openai_api_key",
@@ -638,6 +646,18 @@ async function summarizePage() {
     }
 
     const summaryType = $("summary-type").value;
+
+    // Store validated context for retry
+    lastSummarizeContext = {
+      provider,
+      apiKey,
+      pageContent,
+      summaryType,
+      title: tab.title,
+      url: tab.url,
+      extractedImages,
+    };
+
     summary = await generateSummary(
       provider,
       apiKey,
@@ -670,6 +690,9 @@ async function summarizePage() {
     if (err && typeof err === "object" && err.type && err.userMessage) {
       // Already classified, use directly
       showError(err.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: err.type,
         debugInfo: err.debugInfo,
@@ -679,6 +702,92 @@ async function summarizePage() {
       // New error (from content extraction, validation, etc.), classify it once
       const errorInfo = classifyError(err, null);
       showError(errorInfo.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
+      console.error("[Generate Summary Error]", {
+        type: errorInfo.type,
+        debugInfo: errorInfo.debugInfo,
+        originalMessage: err?.message,
+      });
+    }
+  } finally {
+    setLoading(false);
+  }
+}
+
+/**
+ * Retry the last summarization request
+ */
+async function retrySummarize() {
+  if (!lastSummarizeContext) {
+    showError("No previous request to retry. Please try again from the beginning.");
+    hideRetryButton();
+    return;
+  }
+
+  const { provider, apiKey, pageContent, summaryType, title, url, extractedImages } = lastSummarizeContext;
+
+  if (!pageContent || pageContent.length < 100) {
+    showError(USER_MESSAGES.content_extraction_failed);
+    hideRetryButton();
+    return;
+  }
+
+  $("retry-btn").disabled = true;
+  setLoading(true);
+  hideError();
+  hideRetryButton();
+  $("result-container").classList.add("hidden");
+
+  try {
+    summary = await generateSummary(
+      provider,
+      apiKey,
+      pageContent,
+      summaryType,
+      title,
+      extractedImages,
+    );
+
+    // Convert Markdown to raw HTML
+    const rawHTML = marked.parse(summary);
+
+    // Sanitize the raw HTML to strip out any malicious scripts or invalid tags
+    const cleanHTML = DOMPurify.sanitize(rawHTML);
+
+    // Safely inject sanitized HTML into the UI
+    $("summary-result").innerHTML = cleanHTML;
+    $("result-container").classList.remove("hidden");
+
+    // Display summary word count and reading time
+    updateSummaryStats(summary);
+
+    // Save to history
+    saveSummary(summary, title, url || "", summaryType);
+
+    // Refresh history list
+    loadHistory();
+  } catch (err) {
+    // Check if error is already a structured error object from generateSummary()
+    if (err && typeof err === "object" && err.type && err.userMessage) {
+      // Already classified, use directly
+      showError(err.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
+      console.error("[Generate Summary Error]", {
+        type: err.type,
+        debugInfo: err.debugInfo,
+        userMessage: err.userMessage,
+      });
+    } else {
+      // New error (from content extraction, validation, etc.), classify it once
+      const errorInfo = classifyError(err, null);
+      showError(errorInfo.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: errorInfo.type,
         debugInfo: errorInfo.debugInfo,
@@ -903,6 +1012,7 @@ async function generateSummary(provider, apiKey, content, type, title, images = 
 
 function setLoading(loading) {
   $("summarize-btn").disabled = loading;
+  $("retry-btn").disabled = loading;
   $("btn-text").textContent = loading
     ? "Summarizing..."
     : "Summarize This Page";
@@ -946,7 +1056,6 @@ function clearSummary() {
   $("result-container").classList.add("hidden");
   hideError();
   hideRetryButton();
-  hideLimitWarnings();
   lastSummarizeContext = null;
 }
 

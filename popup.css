@@ -189,6 +189,11 @@ input::placeholder {
   box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
 }
 
+.btn-retry:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .hidden {
   display: none !important;
 }
