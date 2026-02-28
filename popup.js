@@ -95,6 +95,34 @@ function updateSummaryStats(summaryText) {
   `;
 }
 
+/**
+ * Scroll the generated summary results area to the top
+ */
+function scrollToTop() {
+  const resultsContainer = $("result-container");
+
+  if (resultsContainer) {
+    resultsContainer.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/**
+ * Scroll the generated summary results area to the bottom
+ */
+function scrollToBottom() {
+  const resultsContainer = $("result-container");
+
+  if (resultsContainer) {
+    resultsContainer.scrollTo({ top: resultsContainer.scrollHeight, behavior: "smooth" });
+    return;
+  }
+
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+
 // ============================================================================
 // TOKEN LIMIT & CONTENT TRIMMING UTILITIES
 // ============================================================================
@@ -466,6 +494,8 @@ async function init() {
   $("download-md-btn").addEventListener("click", downloadAsMarkdown);
   $("clear-history-btn").addEventListener("click", clearHistory);
   $("clear-summary-btn").addEventListener("click", clearSummary);
+  $("scroll-to-top").addEventListener("click", scrollToTop);
+  $("scroll-to-bottom").addEventListener("click", scrollToBottom);
   $("theme-toggle").addEventListener("click", toggleTheme);
   $("retry-btn").addEventListener("click", retrySummarize);
 
