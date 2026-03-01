@@ -1,4 +1,4 @@
-# 📝 AI page summarizer
+# 📝 DashSummarize
 
 A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of any blog post, article, or documentation page.
 
