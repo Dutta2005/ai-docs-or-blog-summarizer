@@ -23,7 +23,7 @@ A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of
    
 ```
 bash
-   git clone https://github.com/Dutta2005/dashsummarize.git
+   git clone https://github.com/Dutta2005/ai-docs-or-blog-summarizer
    cd dashsummarize
    
 ```
