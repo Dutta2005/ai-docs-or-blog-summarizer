@@ -1,6 +1,6 @@
-# 🤝 Contributing to AI page summarizer
+# 🤝 Contributing to DashSummarize
 
-Thank you for your interest in contributing to **AI page summarizer** 🎉
+Thank you for your interest in contributing to **DashSummarize** 🎉
 This project is beginner-friendly and welcomes contributors from all experience levels, especially open-source enthusiasts and JWOC participants.
 
 ---
@@ -25,8 +25,8 @@ Click the **Fork** button at the top-right of the repository page.
 
 ### 2️⃣ Clone Your Fork
 ```bash
-git clone https://github.com/<your-username>/ai-page-summarizer.git
-cd ai-page-summarizer
+git clone https://github.com/<your-username>/dashsummarize.git
+cd dashsummarize
 ```
 
 ### 3️⃣ Load the Extension Locally

@@ -23,8 +23,8 @@ A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of
    
 ```
 bash
-   git clone https://github.com/Dutta2005/ai-page-summarizer.git
-   cd ai-page-summarizer
+   git clone https://github.com/Dutta2005/dashsummarize.git
+   cd dashsummarize
    
 ```
 
@@ -41,7 +41,7 @@ bash
 
 5. **Pin the extension** (optional)
    - Click the puzzle icon in Chrome toolbar
-   - Pin "AI page summarizer" for easy access
+   - Pin "DashSummarize" for easy access
 
 ## 🔧 Configuration
 
@@ -65,7 +65,7 @@ bash
 ## 📖 Usage
 
 1. **Navigate** to any blog post, article, or documentation page
-2. **Click** the AI page summarizer icon in your toolbar
+2. **Click** the DashSummarize icon in your toolbar
 3. **Select** your preferred summary type:
    - **Brief** - Quick overview in 2-3 sentences
    - **Detailed** - Comprehensive bullet-point summary
@@ -85,7 +85,7 @@ bash
 ## 📁 Project Structure
 
 ```
-ai-page-summarizer/
+dashsummarize/
 ├── manifest.json      # Extension configuration
 ├── popup.html         # Extension popup UI
 ├── popup.css          # Styling
