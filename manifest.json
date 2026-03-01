@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Docs or Blog Summarizer",
+  "name": "AI page summarizer",
   "version": "1.0",
   "description": "Summarize any blog or documentation using OpenAI, Google Gemini, or Claude",
   "permissions": ["activeTab", "tabs", "storage", "scripting"],

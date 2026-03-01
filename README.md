@@ -1,4 +1,4 @@
-# 📝 AI Blog or Docs Summarizer
+# 📝 AI page summarizer
 
 A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of any blog post, article, or documentation page.
 
@@ -20,10 +20,13 @@ A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of
 ## 🚀 Installation
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Dutta2005/ai-docs-or-blog-summarizer.git
-   cd ai-docs-or-blog-summarizer
-   ```
+   
+```
+bash
+   git clone https://github.com/Dutta2005/ai-page-summarizer.git
+   cd ai-page-summarizer
+   
+```
 
 2. **Open Chrome Extensions page**
    - Navigate to `chrome://extensions/` in your browser
@@ -38,7 +41,7 @@ A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of
 
 5. **Pin the extension** (optional)
    - Click the puzzle icon in Chrome toolbar
-   - Pin "AI Page Summarizer" for easy access
+   - Pin "AI page summarizer" for easy access
 
 ## 🔧 Configuration
 
@@ -62,7 +65,7 @@ A Chrome extension that uses OpenAI's GPT API to instantly generate summaries of
 ## 📖 Usage
 
 1. **Navigate** to any blog post, article, or documentation page
-2. **Click** the AI Page Summarizer icon in your toolbar
+2. **Click** the AI page summarizer icon in your toolbar
 3. **Select** your preferred summary type:
    - **Brief** - Quick overview in 2-3 sentences
    - **Detailed** - Comprehensive bullet-point summary

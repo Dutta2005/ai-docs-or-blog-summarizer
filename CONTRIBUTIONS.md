@@ -1,6 +1,6 @@
-# 🤝 Contributing to AI Blog or Docs Summarizer
+# 🤝 Contributing to AI page summarizer
 
-Thank you for your interest in contributing to **AI Blog or Docs Summarizer** 🎉  
+Thank you for your interest in contributing to **AI page summarizer** 🎉
 This project is beginner-friendly and welcomes contributors from all experience levels, especially open-source enthusiasts and JWOC participants.
 
 ---
@@ -25,8 +25,8 @@ Click the **Fork** button at the top-right of the repository page.
 
 ### 2️⃣ Clone Your Fork
 ```bash
-git clone https://github.com/<your-username>/ai-docs-or-blog-summarizer.git
-cd ai-docs-or-blog-summarizer
+git clone https://github.com/<your-username>/ai-page-summarizer.git
+cd ai-page-summarizer
 ```
 
 ### 3️⃣ Load the Extension Locally
