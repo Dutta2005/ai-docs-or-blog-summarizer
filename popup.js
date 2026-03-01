@@ -7,63 +7,6 @@ let summary = null;
 let lastSummarizeContext = null;
 
 // ============================================================================
-// AUTO-SCROLL FUNCTIONS
-// ============================================================================
-
-/**
- * Scroll to the top of the result container with smooth behavior
- */
-function scrollToTop() {
-  const resultContainer = $("result-container");
-  if (resultContainer) {
-    resultContainer.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  }
-}
-
-/**
- * Scroll to the bottom of the result container with smooth behavior
- */
-function scrollToBottom() {
-  const resultContainer = $("result-container");
-  if (resultContainer) {
-    resultContainer.scrollTo({
-      top: resultContainer.scrollHeight,
-      behavior: "smooth"
-    });
-  }
-}
-
-/**
- * Update scroll button visibility based on scroll position
- */
-function updateScrollButtons() {
-  const resultContainer = $("result-container");
-  const scrollToTopBtn = $("scroll-to-top");
-  const scrollToBottomBtn = $("scroll-to-bottom");
-  
-  if (!resultContainer || !scrollToTopBtn || !scrollToBottomBtn) return;
-  
-  const { scrollTop, scrollHeight, clientHeight } = resultContainer;
-  
-  // Show/hide scroll-to-top button based on scroll position
-  if (scrollTop > 50) {
-    scrollToTopBtn.classList.add("visible");
-  } else {
-    scrollToTopBtn.classList.remove("visible");
-  }
-  
-  // Show/hide scroll-to-bottom button based on scroll position
-  if (scrollTop + clientHeight < scrollHeight - 50) {
-    scrollToBottomBtn.classList.add("visible");
-  } else {
-    scrollToBottomBtn.classList.remove("visible");
-  }
-}
-
-// ============================================================================
 // WORD COUNT & READING TIME UTILITIES
 // ============================================================================
 
@@ -150,6 +93,180 @@ function updateSummaryStats(summaryText) {
       <span class="stat-value">${readingTime}</span>
     </span>
   `;
+}
+
+/**
+ * Scroll the generated summary results area to the top
+ */
+function scrollToTop() {
+  const resultsContainer = $("result-container");
+
+  if (resultsContainer) {
+    resultsContainer.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/**
+ * Scroll the generated summary results area to the bottom
+ */
+function scrollToBottom() {
+  const resultsContainer = $("result-container");
+
+  if (resultsContainer) {
+    resultsContainer.scrollTo({ top: resultsContainer.scrollHeight, behavior: "smooth" });
+    return;
+  }
+
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+
+// ============================================================================
+// TOKEN LIMIT & CONTENT TRIMMING UTILITIES
+// ============================================================================
+
+/**
+ * Estimate token count from character count
+ * Uses approximate ratio of 4 characters per token
+ * @param {number} charCount - Number of characters
+ * @returns {number} - Estimated token count
+ */
+function estimateTokens(charCount) {
+  return Math.ceil(charCount / 4);
+}
+
+/**
+ * Check if content exceeds safe token limits for a provider
+ * @param {string} content - The content to check
+ * @param {string} provider - The AI provider name
+ * @returns {Object} - { isOverLimit: boolean, estimatedTokens: number, safeLimit: number }
+ */
+function checkContentLimit(content, provider) {
+  const limits = TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai;
+  const estimatedTokens = estimateTokens(content.length);
+  
+  return {
+    isOverLimit: estimatedTokens > limits.safeLimit,
+    estimatedTokens,
+    safeLimit: limits.safeLimit,
+    maxTokens: limits.maxTokens,
+    charsPerToken: limits.charsPerToken,
+  };
+}
+
+/**
+ * Intelligently trim content to fit within token limit
+ * Tries to preserve complete sentences and important content
+ * @param {string} content - The content to trim
+ * @param {number} maxChars - Maximum characters allowed
+ * @returns {string} - Trimmed content
+ */
+function trimContent(content, maxChars) {
+  if (content.length <= maxChars) {
+    return content;
+  }
+  
+  // Try to trim at a sentence boundary
+  const trimmed = content.slice(0, maxChars);
+  
+  // Find the last sentence ending (., !, ? followed by space or end)
+  const lastSentenceEnd = Math.max(
+    trimmed.lastIndexOf('. '),
+    trimmed.lastIndexOf('! '),
+    trimmed.lastIndexOf('? ')
+  );
+  
+  if (lastSentenceEnd > maxChars * 0.8) {
+    // If we found a sentence end in the last 20%, use it
+    return trimmed.slice(0, lastSentenceEnd + 1);
+  }
+  
+  // Otherwise, try to trim at a word boundary
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace > maxChars * 0.9) {
+    return trimmed.slice(0, lastSpace);
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Remove common code block patterns from extracted page text
+ * (fenced blocks, inline code markers, and heavily-indented code lines)
+ * @param {string} content - Raw extracted content
+ * @returns {string} - Content with code-heavy sections reduced
+ */
+function stripCodeBlocks(content) {
+  if (!content || typeof content !== "string") {
+    return "";
+  }
+
+  let cleaned = content;
+
+  // Remove fenced code blocks: ```...``` or ~~~...~~~
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, " ");
+  cleaned = cleaned.replace(/~~~[\s\S]*?~~~/g, " ");
+
+  // Remove inline code snippets enclosed with backticks
+  cleaned = cleaned.replace(/`[^`\n]+`/g, " ");
+
+  // Remove lines that look like code (4+ leading spaces / tab)
+  cleaned = cleaned
+    .split("\n")
+    .filter((line) => !/^\s{4,}|^\t/.test(line))
+    .join("\n");
+
+  // Normalize whitespace after removals
+  return cleaned.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Show limit warning in the UI
+ * @param {number} estimatedTokens - Estimated token count
+ * @param {number} safeLimit - Safe token limit for the provider
+ */
+function showLimitWarning(estimatedTokens, safeLimit) {
+  const warningEl = $('limit-warning');
+  if (!warningEl) return;
+  
+  warningEl.innerHTML = `
+    <span>Content is very long (~${estimatedTokens.toLocaleString()} tokens). 
+    May exceed ${safeLimit.toLocaleString()} token safe limit. 
+    Consider using a shorter page or the summary may be truncated. Estimate is approximate — may vary for code or non-Latin text.</span>
+  `;
+  warningEl.classList.remove('hidden');
+}
+
+/**
+ * Show trim notice in the UI
+ * @param {number} originalLength - Original content length
+ * @param {number} trimmedLength - Trimmed content length
+ */
+function showTrimNotice(originalLength, trimmedLength) {
+  const noticeEl = $('trim-notice');
+  if (!noticeEl) return;
+  
+  const percentKept = Math.round((trimmedLength / originalLength) * 100);
+  const tokensSaved = estimateTokens(originalLength - trimmedLength);
+  
+  noticeEl.innerHTML = `
+    <span>Content automatically trimmed from ${originalLength.toLocaleString()} to 
+    ${trimmedLength.toLocaleString()} characters (${percentKept}% kept, ~${tokensSaved} tokens saved) 
+    to fit within safe limits.</span>
+  `;
+  noticeEl.classList.remove('hidden');
+}
+
+/**
+ * Hide limit warning and trim notice
+ */
+function hideLimitWarnings() {
+  const warningEl = $('limit-warning');
+  const noticeEl = $('trim-notice');
+  if (warningEl) warningEl.classList.add('hidden');
+  if (noticeEl) noticeEl.classList.add('hidden');
 }
 
 // ============================================================================
@@ -271,6 +388,132 @@ function showLimitWarning(estimatedTokens, safeLimit) {
  * @param {number} trimmedLength - Trimmed content length
  */
 
+/**
+ * Hide limit warning and trim notice
+ */
+function hideLimitWarnings() {
+  const warningEl = $('limit-warning');
+  const noticeEl = $('trim-notice');
+  if (warningEl) warningEl.classList.add('hidden');
+  if (noticeEl) noticeEl.classList.add('hidden');
+}
+
+// ============================================================================
+// ERROR HANDLING SYSTEM
+// ============================================================================
+
+
+const ERROR_TYPES = {
+  NETWORK_ERROR: "network_error",
+  UNAUTHORIZED: "unauthorized",
+  RATE_LIMIT: "rate_limit",
+  SERVER_ERROR: "server_error",
+  TIMEOUT: "timeout",
+  INVALID_RESPONSE: "invalid_response",
+  CONTENT_EXTRACTION_FAILED: "content_extraction_failed",
+  UNKNOWN: "unknown",
+};
+
+// ============================================================================
+// TOKEN LIMIT CONFIGURATION
+// ============================================================================
+
+/**
+ * Token limits for each AI provider (in tokens)
+ * These are conservative limits to ensure safe operation
+ */
+const TOKEN_LIMITS = {
+  openai: {
+    maxTokens: 128000,    // GPT-4o-mini context window
+    safeLimit: 100000,    // Conservative limit for safety
+    charsPerToken: 4,     // Approximate chars per token
+  },
+  gemini: {
+    maxTokens: 1048576,   // Gemini 2.5 Flash context window
+    safeLimit: 800000,    // Conservative limit
+    charsPerToken: 4,
+  },
+  claude: {
+    maxTokens: 200000,    // Claude Sonnet context window
+    safeLimit: 150000,    // Conservative limit
+    charsPerToken: 4,
+  },
+};
+
+/**
+ * Maximum content length to extract (increased from 12000)
+ * This allows for larger pages while still being manageable
+ */
+const MAX_CONTENT_LENGTH = 400000;
+
+
+/**
+ * User-friendly error messages (no technical jargon or raw API errors)
+ */
+const USER_MESSAGES = {
+  network_error: "🌐 Network error: Please check your internet connection.",
+  unauthorized:
+    "🔑 Invalid API key. Please update your API key in the extension settings.",
+  forbidden:
+    "🚫 Request blocked by the AI provider. Check provider requirements and account permissions.",
+  bad_request:
+    "⚠️ Request rejected by AI service. Check model name, account access, or request format.",
+  rate_limit:
+    "⏱️ Rate limited: Too many requests. Please try again in a few moments.",
+  server_error:
+    "🔧 AI service temporarily unavailable. Please try again later.",
+  timeout: "⏳ Request timed out. Please try again.",
+  invalid_response: "⚠️ Unexpected response from AI service. Please try again.",
+  content_extraction_failed:
+    "Could not extract content from this page. Try a different page.",
+  unknown: "❌ An unexpected error occurred. Please try again.",
+};
+
+/**
+ * Classify errors into types and return user-friendly message + debug info
+ * @param {Error} error - The caught error
+ * @param {number} httpStatus - HTTP status code (if available)
+ * @returns {Object} {type, userMessage, debugInfo}
+ */
+function classifyError(error, httpStatus = null) {
+  const errorMessage = (error?.message || "").toLowerCase();
+
+  if (
+    errorMessage.includes("dangerous-direct-browser-access") ||
+    errorMessage.includes("browser")
+  ) {
+    return {
+      type: ERROR_TYPES.UNAUTHORIZED,
+      userMessage:
+        "⚠️ Claude browser request blocked. The extension must send Anthropic's browser-access header.",
+      debugInfo: error?.message || "Browser access restriction",
+    };
+  }
+
+  // Network/fetch errors (TypeError)
+  if (error instanceof TypeError) {
+    if (
+      error.message.includes("Failed to fetch") ||
+      error.message.includes("fetch")
+    ) {
+      return {
+        type: ERROR_TYPES.NETWORK_ERROR,
+        userMessage: USER_MESSAGES.network_error,
+        debugInfo: error.message,
+      };
+    }
+  }
+
+  // Timeout (AbortError)
+  if (error?.name === "AbortError") {
+    return {
+      type: ERROR_TYPES.TIMEOUT,
+      userMessage: USER_MESSAGES.timeout,
+      debugInfo: "Request aborted due to timeout",
+    };
+  }
+
+  // HTTP status errors
   if (httpStatus) {
     if (httpStatus === 400) {
       return {
@@ -380,24 +623,20 @@ async function init() {
   $("download-md-btn").addEventListener("click", downloadAsMarkdown);
   $("clear-history-btn").addEventListener("click", clearHistory);
   $("clear-summary-btn").addEventListener("click", clearSummary);
-  $("theme-toggle").addEventListener("click", toggleTheme);
-  $("retry-btn").addEventListener("click", retrySummarize);
-  $("exclude-code-blocks").addEventListener("change", async (e) => {
-    await chrome.storage.local.set({ exclude_code_blocks: e.target.checked });
-  });
-
-  // Scroll button event listeners
   $("scroll-to-top").addEventListener("click", scrollToTop);
   $("scroll-to-bottom").addEventListener("click", scrollToBottom);
-  
-  // Add scroll event listener to result container for button visibility
-  const resultContainer = $("result-container");
-  if (resultContainer) {
-    resultContainer.addEventListener("scroll", updateScrollButtons);
-  }
+  $("theme-toggle").addEventListener("click", toggleTheme);
+  $("retry-btn").addEventListener("click", retrySummarize);
 
   // Load history on startup
   loadHistory();
+
+  // Auto-click summarize button if opened via keyboard shortcut
+  const shortcutData = await chrome.storage.session.get(['autoSummarize']);
+  if (shortcutData.autoSummarize) {
+    await chrome.storage.session.remove(['autoSummarize']);
+    setTimeout(() => $("summarize-btn")?.click(), 100);
+  }
 }
 
 
@@ -478,6 +717,7 @@ async function saveApiKey(provider) {
 
 async function summarizePage() {
   summary = null;
+  lastSummarizeContext = null;
   const stored = await chrome.storage.local.get([
     "ai_provider",
     "openai_api_key",
@@ -515,23 +755,18 @@ async function summarizePage() {
         return;
       }
 
-      const [{ result: extractedContent }] =
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: extractPageContent,
-        });
+const [{ result: extractedContent }] =
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: extractPageContent,
+    args: [Math.min(
+      MAX_CONTENT_LENGTH,
+      (TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai).safeLimit *
+        (TOKEN_LIMITS[provider] || TOKEN_LIMITS.openai).charsPerToken
+    )],
+  });
       pageContent = extractedContent.text;
       extractedImages = extractedContent.images || [];
-
-      // Store context for retry
-      lastSummarizeContext = {
-        provider,
-        apiKey,
-        pageContent,
-        summaryType: $("summary-type").value,
-        title: tab.title,
-        extractedImages
-      };
 
       // Check if code blocks should be excluded
       const excludeCodeBlocks = $("exclude-code-blocks").checked;
@@ -543,34 +778,33 @@ async function summarizePage() {
       updateContentStats(pageContent);
 
       // Check content limits and show warnings if needed
+      let trimmedContent = pageContent;
+      const limitCheck = checkContentLimit(trimmedContent, provider);
 
-  const limitCheck = checkContentLimit(pageContent, provider);
-  
-  if (limitCheck.isOverLimit) {
-    // Show warning before trimming
-    showLimitWarning(limitCheck.estimatedTokens, limitCheck.safeLimit);
-    
-    // Calculate safe character limit
-    const safeCharLimit = limitCheck.safeLimit * limitCheck.charsPerToken;
-    
-    // Trim content intelligently if it exceeds safe limit
-    if (pageContent.length > safeCharLimit) {
-      const originalLength = pageContent.length;
-      pageContent = trimContent(pageContent, safeCharLimit);
-      
-      // Show trim notice
-      showTrimNotice(originalLength, pageContent.length);
-      
-      // Update stored context with trimmed content
-      lastSummarizeContext.pageContent = pageContent;
-      
-      // Update stats display with trimmed content
-      updateContentStats(pageContent);
-    }
-  } else {
-    // Hide any previous warnings
-    hideLimitWarnings();
-  }
+      if (limitCheck.isOverLimit) {
+        // Show warning before trimming
+        showLimitWarning(limitCheck.estimatedTokens, limitCheck.safeLimit);
+
+        // Calculate safe character limit
+        const safeCharLimit = limitCheck.safeLimit * limitCheck.charsPerToken;
+
+        // Trim content intelligently if it exceeds safe limit
+        if (trimmedContent.length > safeCharLimit) {
+          const originalLength = trimmedContent.length;
+          trimmedContent = trimContent(trimmedContent, safeCharLimit);
+
+          // Show trim notice
+          showTrimNotice(originalLength, trimmedContent.length);
+
+          // Update stats display with trimmed content
+          updateContentStats(trimmedContent);
+        }
+      } else {
+        // Hide any previous warnings
+        hideLimitWarnings();
+      }
+
+      pageContent = trimmedContent;
 
 
       // Show image indicator
@@ -609,6 +843,18 @@ async function summarizePage() {
     }
 
     const summaryType = $("summary-type").value;
+
+    // Store validated context for retry
+    lastSummarizeContext = {
+      provider,
+      apiKey,
+      pageContent,
+      summaryType,
+      title: tab.title,
+      url: tab.url,
+      extractedImages,
+    };
+
     summary = await generateSummary(
       provider,
       apiKey,
@@ -644,6 +890,9 @@ async function summarizePage() {
     if (err && typeof err === "object" && err.type && err.userMessage) {
       // Already classified, use directly
       showError(err.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: err.type,
         debugInfo: err.debugInfo,
@@ -653,6 +902,9 @@ async function summarizePage() {
       // New error (from content extraction, validation, etc.), classify it once
       const errorInfo = classifyError(err, null);
       showError(errorInfo.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: errorInfo.type,
         debugInfo: errorInfo.debugInfo,
@@ -669,34 +921,35 @@ async function summarizePage() {
  */
 async function retrySummarize() {
   if (!lastSummarizeContext) {
+    hideRetryButton();
     showError("No previous request to retry. Please try again from the beginning.");
     return;
   }
 
-  const { provider, apiKey, pageContent, summaryType, title, extractedImages, excludeCodeBlocks } = lastSummarizeContext;
+  const { provider, apiKey, pageContent, summaryType, title, url, extractedImages } = lastSummarizeContext;
 
+  if (!pageContent || pageContent.length < 100) {
+    showError(USER_MESSAGES.content_extraction_failed);
+    hideRetryButton();
+    return;
+  }
 
+  $("retry-btn").disabled = true;
   setLoading(true);
   hideError();
   hideRetryButton();
   $("result-container").classList.add("hidden");
 
   try {
-    // Re-apply code block exclusion if it was enabled
-    let contentToSend = pageContent;
-    if (excludeCodeBlocks) {
-      contentToSend = stripCodeBlocks(pageContent);
-    }
-
     summary = await generateSummary(
       provider,
       apiKey,
-      contentToSend,
+      pageContent,
       summaryType,
       title,
       extractedImages,
+      url,
     );
-
 
     // Convert Markdown to raw HTML
     const rawHTML = marked.parse(summary);
@@ -708,14 +961,11 @@ async function retrySummarize() {
     $("summary-result").innerHTML = cleanHTML;
     $("result-container").classList.remove("hidden");
 
-    // Auto-scroll to top of result after generation
-    scrollToTop();
-
     // Display summary word count and reading time
     updateSummaryStats(summary);
 
     // Save to history
-    saveSummary(summary, title, "", summaryType);
+    saveSummary(summary, title, url || "", summaryType);
 
     // Refresh history list
     loadHistory();
@@ -724,6 +974,9 @@ async function retrySummarize() {
     if (err && typeof err === "object" && err.type && err.userMessage) {
       // Already classified, use directly
       showError(err.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: err.type,
         debugInfo: err.debugInfo,
@@ -733,6 +986,9 @@ async function retrySummarize() {
       // New error (from content extraction, validation, etc.), classify it once
       const errorInfo = classifyError(err, null);
       showError(errorInfo.userMessage);
+      if (lastSummarizeContext !== null) {
+        showRetryButton();
+      }
       console.error("[Generate Summary Error]", {
         type: errorInfo.type,
         debugInfo: errorInfo.debugInfo,
@@ -741,10 +997,11 @@ async function retrySummarize() {
     }
   } finally {
     setLoading(false);
+    $("retry-btn").disabled = false;
   }
 }
 
-function extractPageContent() {
+function extractPageContent(maxLength) {
   const selectors = [
     "article",
     "main",
@@ -804,7 +1061,7 @@ function extractPageContent() {
 
   // Return full content for client-side trimming based on provider limits
   // The content will be intelligently trimmed in summarizePage() if needed
-  return { text: content.slice(0, MAX_CONTENT_LENGTH), images };
+  return { text: content.slice(0, maxLength), images };
 
 }
 
@@ -888,6 +1145,7 @@ async function generateSummary(provider, apiKey, content, type, title, images = 
 
 function setLoading(loading) {
   $("summarize-btn").disabled = loading;
+  $("retry-btn").disabled = loading;
   $("btn-text").textContent = loading
     ? "Summarizing..."
     : "Summarize This Page";
@@ -903,7 +1161,11 @@ function showError(msg) {
   errorElement.textContent = msg;
   errorElement.classList.remove("hidden");
   errorElement.style.display = "block";
-  showRetryButton();
+  if (lastSummarizeContext) {
+    showRetryButton();
+  } else {
+    hideRetryButton();
+  }
   console.warn("[UI Error]", msg);
 }
 
@@ -931,7 +1193,6 @@ function clearSummary() {
   $("result-container").classList.add("hidden");
   hideError();
   hideRetryButton();
-  hideLimitWarnings();
   lastSummarizeContext = null;
 }
 
