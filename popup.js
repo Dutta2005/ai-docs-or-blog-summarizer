@@ -491,6 +491,10 @@ async function init() {
   $("save-openai-key").addEventListener("click", () => saveApiKey("openai"));
   $("save-gemini-key").addEventListener("click", () => saveApiKey("gemini"));
   $("save-claude-key").addEventListener("click", () => saveApiKey("claude"));
+  
+  // Password toggle event listeners
+  initPasswordToggles();
+  
   $("summarize-btn").addEventListener("click", summarizePage);
   $("copy-md-btn").addEventListener("click", copyAsMarkdown);
   $("copy-plain-btn").addEventListener("click", copyAsPlainText);
@@ -1292,4 +1296,37 @@ async function clearHistory() {
     await chrome.storage.local.remove("summary_history");
     renderHistory([]);
   }
+}
+
+// ============================================================================
+// PASSWORD VISIBILITY TOGGLE
+// ============================================================================
+
+/**
+ * Initialize password visibility toggle buttons for all API key inputs
+ */
+function initPasswordToggles() {
+  const toggleButtons = document.querySelectorAll('.password-toggle');
+  
+  toggleButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const targetId = this.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      
+      if (input) {
+        // Toggle input type between password and text
+        if (input.type === 'password') {
+          input.type = 'text';
+          // Show the hide icon (🔒), hide the show icon (👁️)
+          this.querySelector('.eye-icon').classList.add('hidden');
+          this.querySelector('.eye-icon:last-child').classList.remove('hidden');
+        } else {
+          input.type = 'password';
+          // Show the show icon (👁️), hide the hide icon (🔒)
+          this.querySelector('.eye-icon').classList.remove('hidden');
+          this.querySelector('.eye-icon:last-child').classList.add('hidden');
+        }
+      }
+    });
+  });
 }
