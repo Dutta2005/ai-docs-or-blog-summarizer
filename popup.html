@@ -31,19 +31,37 @@
 
       <div class="input-group api-key-group" id="openai-key-group">
         <label for="openai-api-key">OpenAI API Key</label>
-        <input type="password" id="openai-api-key" placeholder="sk-..." />
+        <div class="password-input-wrapper">
+          <input type="password" id="openai-api-key" placeholder="sk-..." />
+          <button type="button" class="password-toggle" data-target="openai-api-key" title="Show/Hide API Key">
+            <span class="eye-icon">👁️</span>
+            <span class="eye-icon hidden">🔒</span>
+          </button>
+        </div>
         <button id="save-openai-key" class="btn-secondary">Save Key</button>
       </div>
 
       <div class="input-group api-key-group hidden" id="gemini-key-group">
         <label for="gemini-api-key">Google Gemini API Key</label>
-        <input type="password" id="gemini-api-key" placeholder="AI..." />
+        <div class="password-input-wrapper">
+          <input type="password" id="gemini-api-key" placeholder="AI..." />
+          <button type="button" class="password-toggle" data-target="gemini-api-key" title="Show/Hide API Key">
+            <span class="eye-icon">👁️</span>
+            <span class="eye-icon hidden">🔒</span>
+          </button>
+        </div>
         <button id="save-gemini-key" class="btn-secondary">Save Key</button>
       </div>
 
       <div class="input-group api-key-group hidden" id="claude-key-group">
         <label for="claude-api-key">Claude API Key</label>
-        <input type="password" id="claude-api-key" placeholder="sk-ant-..." />
+        <div class="password-input-wrapper">
+          <input type="password" id="claude-api-key" placeholder="sk-ant-..." />
+          <button type="button" class="password-toggle" data-target="claude-api-key" title="Show/Hide API Key">
+            <span class="eye-icon">👁️</span>
+            <span class="eye-icon hidden">🔒</span>
+          </button>
+        </div>
         <button id="save-claude-key" class="btn-secondary">Save Key</button>
       </div>
 
