@@ -269,7 +269,21 @@ function hideLimitWarnings() {
   if (noticeEl) noticeEl.classList.add('hidden');
 }
 
+// ============================================================================
+// ERROR HANDLING SYSTEM
+// ============================================================================
 
+
+const ERROR_TYPES = {
+  NETWORK_ERROR: "network_error",
+  UNAUTHORIZED: "unauthorized",
+  RATE_LIMIT: "rate_limit",
+  SERVER_ERROR: "server_error",
+  TIMEOUT: "timeout",
+  INVALID_RESPONSE: "invalid_response",
+  CONTENT_EXTRACTION_FAILED: "content_extraction_failed",
+  UNKNOWN: "unknown",
+};
 
 // ============================================================================
 // TOKEN LIMIT CONFIGURATION
