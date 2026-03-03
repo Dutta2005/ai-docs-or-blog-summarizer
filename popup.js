@@ -1039,7 +1039,12 @@ async function generateSummary(provider, apiKey, content, type, title, images = 
 }
 
 function setLoading(loading) {
-  $("summarize-btn").disabled = loading;
+  if (loading) {
+    $("summarize-btn").disabled = true;
+  } else {
+    const provider = $("ai-provider")?.value || "openai";
+    updateSummarizeButtonState(provider);
+  }
   $("retry-btn").disabled = loading;
   $("btn-text").textContent = loading
     ? "Summarizing..."
