@@ -783,6 +783,8 @@ const [{ result: extractedContent }] =
     $("summary-result").innerHTML = cleanHTML;
     $("result-container").classList.remove("hidden");
 
+    // Automatically scroll to the top when a new summary is shown
+    scrollToTop();
     // Update model badge to show which model generated the summary
     updateModelBadge(provider);
 
