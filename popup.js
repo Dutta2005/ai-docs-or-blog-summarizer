@@ -318,7 +318,7 @@ const TOKEN_LIMITS = {
 const MODEL_DISPLAY_NAMES = {
   openai: "GPT-4o-mini",
   gemini: "Gemini 2.5 Flash",
-  claude: "Claude Sonnet 4",
+  claude: "Claude Sonnet 4.6",
 };
 
 /**
@@ -783,7 +783,8 @@ const [{ result: extractedContent }] =
     const rawHTML = marked.parse(summary);
 
     // Sanitize the raw HTML to strip out any malicious scripts or invalid tags
-    const cleanHTML = DOMPurify.sanitize(rawHTML);
+    // Update model badge to show which model generated the summary
+    updateModelBadge(provider);
 
     // Safely inject sanitized HTML into the UI
     $("summary-result").innerHTML = cleanHTML;
